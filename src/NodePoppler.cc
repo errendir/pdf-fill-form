@@ -212,10 +212,12 @@ WriteFieldsParams v8ParamsToCpp(const Nan::FunctionCallbackInfo<v8::Value>& args
   double scale_factor = 0.2;
   bool antialiasing = false;
 
-  String::Utf8Value sourcePdfFileNameParam(args[0]->ToString());
+  Nan::Utf8String sourcePdfFileNameParam(
+    Nan::To<v8::String>(args[0]).ToLocalChecked()
+  );
   string sourcePdfFileName = string(*sourcePdfFileNameParam);
 
-  Local<Object> changeFields = args[1]->ToObject();
+  Local<Object> changeFields = Nan::To<v8::Object>(args[1]).ToLocalChecked();
 
   // Check if any configuration parameters
   if (args.Length() > 2) {
@@ -224,36 +226,39 @@ WriteFieldsParams v8ParamsToCpp(const Nan::FunctionCallbackInfo<v8::Value>& args
     Local<String> scaleStr = Nan::New("scale").ToLocalChecked();
     Local<String> antialiasStr = Nan::New("antialias").ToLocalChecked();
 
-    parameters = args[2]->ToObject();
+    parameters = Nan::To<v8::Object>(args[2]).ToLocalChecked();
 
     Local<Value> saveParam = Nan::Get(parameters, saveStr).ToLocalChecked();
     if (!saveParam->IsUndefined()) {
-      String::Utf8Value saveFormatParam(saveParam);
+      Nan::Utf8String saveFormatParam(saveParam);
       saveFormat = string(*saveFormatParam);
     }
 
     Local<Value> coresParam = Nan::Get(parameters, coresStr).ToLocalChecked();
     if (coresParam->IsInt32()) {
-      nCores = coresParam->Int32Value();
+      // TODO: Convert this to the nan
+      nCores = coresParam->Int32Value(v8::Isolate::GetCurrent()->GetCurrentContext()).ToChecked();
     }
 
     Local<Value> scaleParam = Nan::Get(parameters, scaleStr).ToLocalChecked();
     if (scaleParam->IsNumber()) {
-      scale_factor = scaleParam->NumberValue();
+      scale_factor = scaleParam->NumberValue(v8::Isolate::GetCurrent()->GetCurrentContext()).ToChecked();
     }
 
     Local<Value> antialiasParam = Nan::Get(parameters, antialiasStr).ToLocalChecked();
     if (antialiasParam->IsBoolean()) {
-      antialiasing = antialiasParam->BooleanValue();
+      antialiasing = antialiasParam->BooleanValue(v8::Isolate::GetCurrent()->GetCurrentContext()).ToChecked();
     }
   }
 
   // Convert form fields to c++ map
-  Local<Array> fieldArray = changeFields->GetPropertyNames();
+  Local<Array> fieldArray = changeFields->GetPropertyNames(v8::Isolate::GetCurrent()->GetCurrentContext()).ToLocalChecked();
   for (uint32_t i = 0; i < fieldArray->Length(); i += 1) {
     Local<Value> name = fieldArray->Get(i);
     Local<Value> value = changeFields->Get(name);
-    fields[std::string(*String::Utf8Value(name))] = std::string(*String::Utf8Value(value));
+    auto name_s = std::string(*Nan::Utf8String(Nan::To<v8::String>(name).ToLocalChecked()));
+    auto value_s = std::string(*Nan::Utf8String(Nan::To<v8::String>(value).ToLocalChecked()));
+    fields[name_s] = value_s;
   }
 
   struct WriteFieldsParams params(sourcePdfFileName, saveFormat, fields);
