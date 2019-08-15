@@ -5,16 +5,17 @@
             "variables": {
                 "myLibraries": "cairo poppler-qt5",
                 "osLibraries": ""
-            },            
+            },
             "sources": [
                 "src/pdf-fill-form.cc",
                 "src/NodePopplerAsync.cc",
                 "src/NodePoppler.cc"
             ],
-            'cflags!': [ '-fno-exceptions' ],
-            'cflags_cc!': [ '-fno-exceptions' ],
+            'cflags!': [ '-fno-exceptions', '-fPIC' ],
+            'cflags_cc!': [ '-fno-exceptions', '-fPIC' ],
             "cflags": [
-                "<!@(pkg-config --cflags <(osLibraries) <(myLibraries))"
+                "<!@(pkg-config --cflags <(osLibraries) <(myLibraries))",
+                "-fPIC"
             ],
             'conditions': [
               ['OS=="linux"', {
@@ -27,7 +28,7 @@
                 "OTHER_CFLAGS": [
                     '-mmacosx-version-min=10.11',
                     '-std=c++11',
-                    '-stdlib=libc++',                
+                    '-stdlib=libc++',
                     "-fexceptions",
                     "<!@(pkg-config --cflags <(osLibraries) <(myLibraries))"
                 ]
