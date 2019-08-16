@@ -11,12 +11,13 @@
                 "src/NodePopplerAsync.cc",
                 "src/NodePoppler.cc"
             ],
-            'cflags!': [ '-fno-exceptions', '-fPIC' ],
-            'cflags_cc!': [ '-fno-exceptions', '-fPIC' ],
+            'cflags!': [ '-fno-exceptions' ],
+            'cflags_cc!': [ '-fno-exceptions' ],
             "cflags": [
                 "<!@(pkg-config --cflags <(osLibraries) <(myLibraries))",
                 "-fPIC"
             ],
+            "cflags_cc": [ "-fPIC" ],
             'conditions': [
               ['OS=="linux"', {
                 "variables": {
