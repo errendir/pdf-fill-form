@@ -5,6 +5,7 @@
 #include <map>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fstream>
 
 #include <poppler/qt5/poppler-form.h>
 #include <poppler/qt5/poppler-qt5.h>
@@ -258,6 +259,7 @@ WriteFieldsParams v8ParamsToCpp(const Nan::FunctionCallbackInfo<v8::Value>& args
     Local<Value> value = changeFields->Get(name);
     auto name_s = std::string(*Nan::Utf8String(Nan::To<v8::String>(name).ToLocalChecked()));
     auto value_s = std::string(*Nan::Utf8String(Nan::To<v8::String>(value).ToLocalChecked()));
+    std:cout << "Parsing field: " << name_s << " with value: " << value_s << std::endl;
     fields[name_s] = value_s;
   }
 
@@ -267,6 +269,21 @@ WriteFieldsParams v8ParamsToCpp(const Nan::FunctionCallbackInfo<v8::Value>& args
   params.antialiasing = antialiasing;
   return params;
 }
+
+// string ToHex(const string& s, bool upper_case /* = true */)
+// {
+//     ostringstream ret;
+
+//     for (string::size_type i = 0; i < s.length(); ++i)
+//         ret << std::hex << std::setfill('0') << std::setw(2) << (upper_case ? std::uppercase : std::nouppercase) << (int)s[i] << " ";
+
+//     return ret.str();
+// }
+
+// string ConvertToUTF8(const string& s) {
+//   std::wstring_convert<std::codecvt_utf8_utf8<char16_t>, char16_t> utf8conv;
+//   std::u16string utf16 = utf16conv.from_bytes(utf8);
+// }
 
 // Pdf creator that is not dependent on V8 internals (safe at async?)
 QBuffer *writePdfFields(const struct WriteFieldsParams &params) {
@@ -294,6 +311,27 @@ QBuffer *writePdfFields(const struct WriteFieldsParams &params) {
 
     foreach (Poppler::FormField *field, formFields) {
       string fieldName = field->fullyQualifiedName().toStdString();
+
+      fieldName.erase(
+        std::remove_if(fieldName.begin(),
+                       fieldName.end(),
+                       [](unsigned int x){return x > 0xFFF;}),
+        fieldName.end()
+      );
+      // std::cout << "Discovered field: " << fieldName << " with id: " << field->id() << " and found #" << params.fields.count(fieldName) << "\n";
+      // std::cout << "hex name: " << ToHex(fieldName, false) << "\n";
+      // for (std::string::size_type i = 0; i < fieldName.size(); i++) {
+		  //   std::cout << fieldName[i] << ' ';
+	    // }
+      // std::cout << "expected hex name: " << ToHex("form1[0].#subform[0].Line1a_FamilyName[0]", false) << "\n";
+      // if (params.fields.count(fieldName)) {
+      //   std::cout << "Filling with " << params.fields.at(fieldName) << "\n";
+      // }
+
+      // if (fieldName == "form1[0].#subform[0].Line1a_FamilyName[0]") {
+      //   std::cout << "Found the correct field! " << "\n";
+      // }
+
       // Support writing fields by both fieldName and id.
       // If fieldName is not present in params, try id.
       if (params.fields.count(fieldName) == 0) {
@@ -331,23 +369,22 @@ QBuffer *writePdfFields(const struct WriteFieldsParams &params) {
         // ! TODO ! Note. Poppler doesn't support checkboxes with hashtag names (aka using exportValue).
         if (field->type() == Poppler::FormField::FormButton) {
           Poppler::FormFieldButton* myButton = (Poppler::FormFieldButton *)field;
+
           switch (myButton->buttonType()) {
             // Push
             case Poppler::FormFieldButton::Push:     break;
             case Poppler::FormFieldButton::CheckBox:
-              if (params.fields.at(fieldName).compare("true") == 0) {
-                myButton->setState(true);
-              }
-              else {
-                myButton->setState(false);
-              }
+              std::cout << "Setting button to " << params.fields.at(fieldName) << "\n";
+              myButton->setState(params.fields.at(fieldName).c_str());
               break;
             case Poppler::FormFieldButton::Radio:
               if (params.fields.at(fieldName).compare(myButton->caption().toUtf8().constData()) == 0) {
-                myButton->setState(true);
+                std::cout << "Setting radio button to true\n";
+                myButton->setState("true");
               }
               else {
-                myButton->setState(false);
+                std::cout << "Setting radio button to false\n";
+                myButton->setState("false");
               }
               break;
           }
